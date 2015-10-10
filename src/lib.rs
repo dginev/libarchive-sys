@@ -332,8 +332,13 @@ impl Drop for ArchiveEntryReader {
     use ArchiveEntryIOType::*;
     if Rc::is_unique(&self.handler) {
       match self.iotype {
-        ReaderEntry => unsafe { archive_read_free(*self.handler); },
-        WriterEntry => unsafe { archive_write_free(*self.handler); }
+        ReaderEntry => unsafe { 
+          archive_read_close(*self.handler);
+          archive_read_free(*self.handler); },
+        WriterEntry => unsafe {
+          archive_write_close(*self.handler);
+          archive_write_free(*self.handler); 
+        }
       }
     }
   }
@@ -342,7 +347,10 @@ impl Drop for ArchiveEntryReader {
 impl Drop for Reader {
 	fn drop(&mut self) {
 		if Rc::is_unique(&self.handler) {
-			unsafe { archive_read_free(*self.handler); }
+			unsafe { 
+        archive_read_close(*self.handler); 
+        archive_read_free(*self.handler); 
+      }
 		}
 	}
 }
@@ -358,6 +366,7 @@ impl Drop for Writer {
 	fn drop(&mut self) {
 		if Rc::is_unique(&self.handler) {
 			unsafe { 
+        archive_write_close(*self.handler); 
         archive_write_free(*self.handler); 
       }
 		}
@@ -526,7 +535,10 @@ impl WriterToDisk {
 impl Drop for WriterToDisk {
 	fn drop(&mut self) {
 		if Rc::is_unique(&self.handler) {
-			unsafe { archive_write_free(*self.handler); }
+			unsafe { 
+        archive_write_close(*self.handler); 
+        archive_write_free(*self.handler); 
+      }
 		}
 	}
 }

@@ -330,6 +330,7 @@ impl Reader {
 impl Drop for ArchiveEntryReader {
   fn drop(&mut self) {
     use ArchiveEntryIOType::*;
+    unsafe{ archive_entry_free(self.entry); }
     if Rc::is_unique(&self.handler) {
       match self.iotype {
         ReaderEntry => unsafe { archive_read_free(*self.handler); },

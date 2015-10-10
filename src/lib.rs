@@ -222,7 +222,6 @@ impl Reader {
                 Err(AllocationError)
             } else {
                 Ok(Reader { handler: Rc::new(h) })
-
             }
         }
     }
@@ -321,6 +320,14 @@ impl Reader {
           }
         }
     }
+}
+
+impl Drop for ArchiveEntryReader {
+  fn drop(&mut self) {
+    if Rc::is_unique(&self.handler) {
+      unsafe { archive_read_free(*self.handler); }
+    }
+  }
 }
 
 impl Drop for Reader {

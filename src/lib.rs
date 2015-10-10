@@ -95,6 +95,10 @@ pub enum ArchiveFilter {
   // TODO : Program(&str)
   Xz
 }
+pub enum ArchiveEntryIOType {
+  ReaderEntry,
+  WriterEntry
+}
 
 pub enum ArchiveEntryFiletype {
   AE_IFMT  ,
@@ -294,11 +298,12 @@ impl Reader {
     }
 
     pub fn next_header<'s>(&'s self) -> Result<ArchiveEntryReader, ArchiveError> {
+        use ArchiveEntryIOType::*;
         unsafe {
             let mut entry: *mut Struct_archive_entry = ptr::null_mut();
             let res = archive_read_next_header(*self.handler, &mut entry);
             if res==ARCHIVE_OK {
-                Ok( ArchiveEntryReader { entry: entry, handler: self.handler.clone() } )
+                Ok( ArchiveEntryReader { entry: entry, handler: self.handler.clone(), iotype: ReaderEntry } )
             } else {
                 Err(code_to_error(res))
             }
@@ -324,8 +329,12 @@ impl Reader {
 
 impl Drop for ArchiveEntryReader {
   fn drop(&mut self) {
+    use ArchiveEntryIOType::*;
     if Rc::is_unique(&self.handler) {
-      unsafe { archive_read_free(*self.handler); }
+      match self.iotype {
+        ReaderEntry => unsafe { archive_read_free(*self.handler); },
+        WriterEntry => unsafe { archive_write_free(*self.handler); }
+      }
     }
   }
 }
@@ -460,11 +469,12 @@ impl Writer {
   }
 
   pub fn write_header_new(&mut self, pathname: &str, entry_size: i64) -> Result<&mut Self, ArchiveError> {
+      use ArchiveEntryIOType::*;
       unsafe {
         let new_entry = archive_entry_new();
         archive_entry_set_perm(new_entry, 0o755);
         archive_entry_set_size(new_entry, entry_size);
-        let entry = ArchiveEntryReader { entry: new_entry, handler: self.handler.clone() };
+        let entry = ArchiveEntryReader { entry: new_entry, handler: self.handler.clone(), iotype: WriterEntry };
         entry.set_filetype(ArchiveEntryFiletype::AE_IFREG);
         entry.set_pathname(pathname);
 
@@ -523,7 +533,8 @@ impl Drop for WriterToDisk {
 
 pub struct ArchiveEntryReader {
     entry: *mut Struct_archive_entry,
-    handler: Rc<*mut Struct_archive>
+    handler: Rc<*mut Struct_archive>,
+    iotype: ArchiveEntryIOType
 }
 
 macro_rules! get_time {

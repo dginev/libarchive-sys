@@ -7,7 +7,6 @@
 #![allow(non_camel_case_types)]
 #![feature(trace_macros)]
 #![feature(concat_idents)]
-#![feature(box_raw)]
 #![feature(rc_counts)]
 
 
@@ -251,7 +250,7 @@ impl Reader {
     }
 
 
-    pub fn open_filename(self, fileName: &str, bufferSize: u64 ) -> Result<Self, ArchiveError> {
+    pub fn open_filename(self, fileName: &str, bufferSize: usize ) -> Result<Self, ArchiveError> {
         let fname = CString::new(fileName).unwrap();
         unsafe {
             let res = archive_read_open_filename(*self.handler, fname.as_ptr(), bufferSize);
@@ -266,7 +265,7 @@ impl Reader {
     pub fn open_memory(self, memory: &mut [u8]) -> Result<Self, ArchiveError> {
         unsafe {
             let memptr: *mut u8 = &mut memory[0];
-            let res = archive_read_open_memory(*self.handler, memptr as *mut c_void, memory.len() as u64);
+            let res = archive_read_open_memory(*self.handler, memptr as *mut c_void, memory.len() as usize);
             if res==ARCHIVE_OK {
                 Ok(self)
             } else {
@@ -457,7 +456,7 @@ impl Writer {
   pub fn open_memory(&mut self, memory: &mut [u8]) -> Result<&mut Self, ArchiveError> {
       unsafe {
           let memptr: *mut u8 = &mut memory[0];
-          let res = archive_write_open_memory(*self.handler, memptr as *mut c_void, memory.len() as u64, *self.outUsed);
+          let res = archive_write_open_memory(*self.handler, memptr as *mut c_void, memory.len() as usize, *self.outUsed);
           if res==ARCHIVE_OK {
               Ok(self)
           } else {
@@ -496,7 +495,7 @@ impl Writer {
         let data_len = data.len();
         let data_bytes = CString::from_vec_unchecked(data);
         // TODO: How to handle errors here?
-        archive_write_data(*self.handler, data_bytes.as_ptr() as *mut c_void, data_len as u64);
+        archive_write_data(*self.handler, data_bytes.as_ptr() as *mut c_void, data_len as usize);
       }
       Ok(self)
   }

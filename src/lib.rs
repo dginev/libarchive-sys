@@ -26,7 +26,6 @@ extern crate time;
 use time::Timespec;
 
 
-#[allow(raw_pointer_derive)]
 #[derive(PartialEq, Clone)]
 pub struct Reader {
     handler: Rc<*mut Struct_archive>
@@ -319,7 +318,7 @@ impl Reader {
           } else if res==0 {
             Err(code_to_error(ARCHIVE_EOF))
           } else {
-            chunk_vec.set_len(size as usize);
+            chunk_vec.set_len(res as usize);
             Ok(chunk_vec)
           }
         }
@@ -354,7 +353,6 @@ impl Drop for Reader {
 	}
 }
 
-#[allow(raw_pointer_derive)]
 #[derive(PartialEq, Clone)]
 pub struct Writer {
 	handler: Rc<*mut Struct_archive>,
@@ -512,7 +510,6 @@ impl Writer {
 
 }
 
-#[allow(raw_pointer_derive)]
 #[derive(PartialEq, Clone)]
 pub struct WriterToDisk {
 	handler: Rc<*mut Struct_archive>

@@ -1,5 +1,6 @@
 
 #![feature(libc)]
+#![feature(is_unique)]
 
 //for debug purpose
 #![allow(dead_code)]
@@ -7,7 +8,6 @@
 #![allow(non_camel_case_types)]
 #![feature(trace_macros)]
 #![feature(concat_idents)]
-#![feature(rc_counts)]
 
 
 mod ffi;
@@ -106,7 +106,7 @@ pub enum ArchiveEntryFiletype {
   AE_IFCHR ,
   AE_IFBLK ,
   AE_IFDIR ,
-  AE_IFIFO 
+  AE_IFIFO
 }
 /*
 impl fmt::Debug for AllocationError {
@@ -330,12 +330,12 @@ impl Drop for ArchiveEntryReader {
     use ArchiveEntryIOType::*;
     if Rc::is_unique(&self.handler) {
       match self.iotype {
-        ReaderEntry => unsafe { 
+        ReaderEntry => unsafe {
           archive_read_close(*self.handler);
           archive_read_free(*self.handler); },
         WriterEntry => unsafe {
           archive_write_close(*self.handler);
-          archive_write_free(*self.handler); 
+          archive_write_free(*self.handler);
         }
       }
     }
@@ -345,9 +345,9 @@ impl Drop for ArchiveEntryReader {
 impl Drop for Reader {
 	fn drop(&mut self) {
 		if Rc::is_unique(&self.handler) {
-			unsafe { 
-        archive_read_close(*self.handler); 
-        archive_read_free(*self.handler); 
+			unsafe {
+        archive_read_close(*self.handler);
+        archive_read_free(*self.handler);
       }
 		}
 	}
@@ -362,9 +362,9 @@ pub struct Writer {
 impl Drop for Writer {
 	fn drop(&mut self) {
 		if Rc::is_unique(&self.handler) {
-			unsafe { 
-        archive_write_close(*self.handler); 
-        archive_write_free(*self.handler); 
+			unsafe {
+        archive_write_close(*self.handler);
+        archive_write_free(*self.handler);
       }
 		}
 	}
@@ -531,9 +531,9 @@ impl WriterToDisk {
 impl Drop for WriterToDisk {
 	fn drop(&mut self) {
 		if Rc::is_unique(&self.handler) {
-			unsafe { 
-        archive_write_close(*self.handler); 
-        archive_write_free(*self.handler); 
+			unsafe {
+        archive_write_close(*self.handler);
+        archive_write_free(*self.handler);
       }
 		}
 	}
@@ -615,7 +615,7 @@ impl ArchiveEntryReader {
             self.extract(flags)
         }
     }
-    pub fn extract(self,flags : Vec<ArchiveExtractFlag>) -> Result<Self, ArchiveError> {        
+    pub fn extract(self,flags : Vec<ArchiveExtractFlag>) -> Result<Self, ArchiveError> {
         unsafe {
           let res = archive_read_extract(*self.handler, self.entry, flags_to_code(flags));
           if res==ARCHIVE_OK {

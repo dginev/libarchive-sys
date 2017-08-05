@@ -1,6 +1,5 @@
 
 #![feature(libc)]
-#![feature(is_unique)]
 
 //for debug purpose
 #![allow(dead_code)]
@@ -8,7 +7,6 @@
 #![allow(non_camel_case_types)]
 #![feature(trace_macros)]
 #![feature(concat_idents)]
-
 
 mod ffi;
 use ffi::archive::*;
@@ -328,7 +326,7 @@ impl Reader {
 impl Drop for ArchiveEntryReader {
   fn drop(&mut self) {
     use ArchiveEntryIOType::*;
-    if Rc::is_unique(&self.handler) {
+    if Rc::strong_count(&self.handler) <= 1 {
       match self.iotype {
         ReaderEntry => unsafe {
           archive_read_close(*self.handler);
@@ -344,7 +342,7 @@ impl Drop for ArchiveEntryReader {
 
 impl Drop for Reader {
 	fn drop(&mut self) {
-		if Rc::is_unique(&self.handler) {
+		if Rc::strong_count(&self.handler) <= 1 {
 			unsafe {
         archive_read_close(*self.handler);
         archive_read_free(*self.handler);
@@ -361,7 +359,7 @@ pub struct Writer {
 
 impl Drop for Writer {
 	fn drop(&mut self) {
-		if Rc::is_unique(&self.handler) {
+		if Rc::strong_count(&self.handler) <= 1 {
 			unsafe {
         archive_write_close(*self.handler);
         archive_write_free(*self.handler);
@@ -530,7 +528,7 @@ impl WriterToDisk {
 
 impl Drop for WriterToDisk {
 	fn drop(&mut self) {
-		if Rc::is_unique(&self.handler) {
+		if Rc::strong_count(&self.handler) <= 1 {
 			unsafe {
         archive_write_close(*self.handler);
         archive_write_free(*self.handler);

@@ -3,16 +3,13 @@ extern crate libc;
 
 pub use self::libc::{c_void, c_int, c_uint, c_char, c_long, c_ulong, int64_t, ssize_t, wchar_t, size_t, time_t, FILE, stat, dev_t, mode_t};
 
-#[repr(C)]
-pub struct Struct_archive;
-#[repr(C)]
-pub struct Struct_archive_entry;
-#[repr(C)]
-pub struct Struct_stat;
-#[repr(C)]
-pub struct Struct_archive_acl;
-#[repr(C)]
-pub struct Struct_archive_entry_linkresolver;
+// empty enums seem to be the recommended state I could find, see:
+// https://github.com/rust-lang/rust/issues/27303
+pub enum Struct_archive {}
+pub enum Struct_archive_entry {}
+pub enum Struct_stat {}
+pub enum Struct_archive_acl {}
+pub enum Struct_archive_entry_linkresolver {}
 
 pub type archive_read_callback =
     extern "C" fn(arg1: *mut Struct_archive,
@@ -21,7 +18,7 @@ pub type archive_read_callback =
 pub type archive_skip_callback =
     extern "C" fn(arg1: *mut Struct_archive,
                   _client_data: *mut c_void, request: int64_t)
-        -> int64_t; 
+        -> int64_t;
 pub type archive_seek_callback =
     extern "C" fn(arg1: *mut Struct_archive,
                   _client_data: *mut c_void, offset: int64_t,

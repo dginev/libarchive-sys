@@ -170,9 +170,9 @@ fn flags_to_code(flags: Vec<ArchiveExtractFlag>) -> c_int {
 }
 
 struct ReadContainer {
-    reader: Box<Read>,
+    reader: Box<dyn Read>,
     buffer: Vec<u8>,
-    seeker: Option<Box<Seek>>,
+    seeker: Option<Box<dyn Seek>>,
 }
 
 impl ReadContainer {

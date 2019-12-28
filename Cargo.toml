@@ -12,7 +12,7 @@ repository="https://github.com/tz-lom/libarchive-sys"
 build = "build.rs"
 
 [dependencies]
-time="*"
+time="0.2"
 
 [lib]
 name = "Archive"

@@ -19,7 +19,7 @@ use std::ptr;
 use std::rc::Rc;
 
 extern crate time;
-use time::Timespec;
+use time::Duration;
 
 #[derive(PartialEq, Clone)]
 pub struct Reader {
@@ -119,22 +119,22 @@ impl fmt::Debug for AllocationError {
 fn code_to_error(code: c_int) -> ArchiveError {
     match code {
         ARCHIVE_OK => {
-            return ArchiveError::Ok;
+            ArchiveError::Ok
         }
         ARCHIVE_WARN => {
-            return ArchiveError::Warn;
+            ArchiveError::Warn
         }
         ARCHIVE_FAILED => {
-            return ArchiveError::Failed;
+            ArchiveError::Failed
         }
         ARCHIVE_RETRY => {
-            return ArchiveError::Retry;
+            ArchiveError::Retry
         }
         ARCHIVE_EOF => {
-            return ArchiveError::Eof;
+            ArchiveError::Eof
         }
         ARCHIVE_FATAL => {
-            return ArchiveError::Fatal;
+            ArchiveError::Fatal
         }
         _ => {
             panic!();
@@ -193,13 +193,13 @@ extern "C" fn arch_read(
         let size = rc.read_bytes();
         Box::into_raw(rc);
 
-        if size.is_err() {
-            let err = size.unwrap_err();
+        if let Err(err) = size {
             let descr = CString::new(err.description()).unwrap();
             archive_set_error(arch, err.raw_os_error().unwrap_or(0), descr.as_ptr());
-            return -1;
+            -1
+        } else {
+            size.unwrap() as ssize_t
         }
-        return size.unwrap() as ssize_t;
     }
 }
 
@@ -207,15 +207,15 @@ extern "C" fn arch_read(
 extern "C" fn arch_close(arch: *mut Struct_archive, _client_data: *mut c_void) -> c_int {
     unsafe {
         let rc = Box::from_raw(_client_data as *mut ReadContainer);
-        return ARCHIVE_OK;
+        ARCHIVE_OK
     }
 }
 
 extern "C" fn arch_skip(
     _: *mut Struct_archive,
     _client_data: *mut c_void,
-    request: int64_t,
-) -> int64_t {
+    request: i64,
+) -> i64 {
     unsafe {
         let mut rc = Box::from_raw(_client_data as *mut ReadContainer);
 
@@ -232,7 +232,7 @@ extern "C" fn arch_skip(
             .unwrap_or(0);
 
         Box::into_raw(rc);
-        return size as int64_t;
+        size as i64
     }
 }
 
@@ -326,14 +326,14 @@ impl Reader {
         }
     }
 
-    pub fn next_header<'s>(&'s self) -> Result<ArchiveEntryReader, ArchiveError> {
+    pub fn next_header(&self) -> Result<ArchiveEntryReader, ArchiveError> {
         use ArchiveEntryIOType::*;
         unsafe {
             let mut entry: *mut Struct_archive_entry = ptr::null_mut();
             let res = archive_read_next_header(*self.handler, &mut entry);
             if res == ARCHIVE_OK {
                 Ok(ArchiveEntryReader {
-                    entry: entry,
+                    entry,
                     handler: self.handler.clone(),
                     iotype: ReaderEntry,
                 })
@@ -343,7 +343,7 @@ impl Reader {
         }
     }
 
-    pub fn read_data<'s>(&'s self, size: size_t) -> Result<Vec<u8>, ArchiveError> {
+    pub fn read_data(&self, size: size_t) -> Result<Vec<u8>, ArchiveError> {
         unsafe {
             let mut chunk_vec = Vec::with_capacity(size as usize);
             let chunk_ptr = chunk_vec.as_mut_ptr();
@@ -606,11 +606,11 @@ pub struct ArchiveEntryReader {
 
 macro_rules! get_time {
     ( $fname:ident, $apiname:ident) => {
-        pub fn $fname(&self) -> Timespec {
+        pub fn $fname(&self) -> Duration {
             unsafe {
                 let sec = (concat_idents!(archive_entry_, $apiname))(self.entry);
                 let nsec = (concat_idents!(archive_entry_, $apiname, _nsec))(self.entry);
-                Timespec::new(sec, nsec as i32)
+                Duration::new(sec, nsec as i32)
             }
         }
     };
@@ -636,14 +636,14 @@ impl ArchiveEntryReader {
 
     pub fn set_filetype(&self, filetype: ArchiveEntryFiletype) {
         let c_type = match filetype {
-            ArchiveEntryFiletype::AE_IFMT => 0o170000,
-            ArchiveEntryFiletype::AE_IFREG => 0o100000,
-            ArchiveEntryFiletype::AE_IFLNK => 0o120000,
-            ArchiveEntryFiletype::AE_IFSOCK => 0o140000,
-            ArchiveEntryFiletype::AE_IFCHR => 0o020000,
-            ArchiveEntryFiletype::AE_IFBLK => 0o060000,
-            ArchiveEntryFiletype::AE_IFDIR => 0o040000,
-            ArchiveEntryFiletype::AE_IFIFO => 0o010000,
+            ArchiveEntryFiletype::AE_IFMT => 0o170_000,
+            ArchiveEntryFiletype::AE_IFREG => 0o100_000,
+            ArchiveEntryFiletype::AE_IFLNK => 0o120_000,
+            ArchiveEntryFiletype::AE_IFSOCK => 0o140_000,
+            ArchiveEntryFiletype::AE_IFCHR => 0o020_000,
+            ArchiveEntryFiletype::AE_IFBLK => 0o060_000,
+            ArchiveEntryFiletype::AE_IFDIR => 0o040_000,
+            ArchiveEntryFiletype::AE_IFIFO => 0o010_000,
         };
         unsafe {
             archive_entry_set_filetype(self.entry, c_type);

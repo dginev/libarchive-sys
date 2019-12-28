@@ -1,7 +1,5 @@
 
-extern crate libc;
-
-pub use self::libc::{c_void, c_int, c_uint, c_char, c_long, c_ulong, ssize_t, wchar_t, size_t, time_t, FILE, stat, dev_t, mode_t};
+pub use libc::{c_void, c_int, c_uint, c_char, c_long, c_ulong, ssize_t, wchar_t, size_t, time_t, FILE, stat, dev_t, mode_t};
 
 // empty enums seem to be the recommended state I could find, see:
 // https://github.com/rust-lang/rust/issues/27303

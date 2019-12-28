@@ -1,11 +1,7 @@
-#![feature(libc)]
 //for debug purpose
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
-#![feature(trace_macros)]
-#![feature(concat_idents)]
-#![feature(rustc_private)]
 
 mod ffi;
 use ffi::archive::*;
@@ -18,6 +14,7 @@ use std::io::{Read, Seek};
 use std::ptr;
 use std::rc::Rc;
 
+extern crate libc;
 extern crate time;
 use time::Duration;
 
@@ -118,24 +115,12 @@ impl fmt::Debug for AllocationError {
 
 fn code_to_error(code: c_int) -> ArchiveError {
     match code {
-        ARCHIVE_OK => {
-            ArchiveError::Ok
-        }
-        ARCHIVE_WARN => {
-            ArchiveError::Warn
-        }
-        ARCHIVE_FAILED => {
-            ArchiveError::Failed
-        }
-        ARCHIVE_RETRY => {
-            ArchiveError::Retry
-        }
-        ARCHIVE_EOF => {
-            ArchiveError::Eof
-        }
-        ARCHIVE_FATAL => {
-            ArchiveError::Fatal
-        }
+        ARCHIVE_OK => ArchiveError::Ok,
+        ARCHIVE_WARN => ArchiveError::Warn,
+        ARCHIVE_FAILED => ArchiveError::Failed,
+        ARCHIVE_RETRY => ArchiveError::Retry,
+        ARCHIVE_EOF => ArchiveError::Eof,
+        ARCHIVE_FATAL => ArchiveError::Fatal,
         _ => {
             panic!();
         }
@@ -211,11 +196,7 @@ extern "C" fn arch_close(arch: *mut Struct_archive, _client_data: *mut c_void) -
     }
 }
 
-extern "C" fn arch_skip(
-    _: *mut Struct_archive,
-    _client_data: *mut c_void,
-    request: i64,
-) -> i64 {
+extern "C" fn arch_skip(_: *mut Struct_archive, _client_data: *mut c_void, request: i64) -> i64 {
     unsafe {
         let mut rc = Box::from_raw(_client_data as *mut ReadContainer);
 

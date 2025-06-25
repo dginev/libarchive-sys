@@ -4,14 +4,13 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 #![feature(trace_macros)]
-#![feature(concat_idents)]
 #![feature(rustc_private)]
+#![feature(macro_metavar_expr_concat)]
 
 mod ffi;
 use ffi::archive::*;
 
 use std::any::Any;
-use std::error::Error;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::io::{Read, Seek};
@@ -118,24 +117,12 @@ impl fmt::Debug for AllocationError {
 
 fn code_to_error(code: c_int) -> ArchiveError {
     match code {
-        ARCHIVE_OK => {
-            ArchiveError::Ok
-        }
-        ARCHIVE_WARN => {
-            ArchiveError::Warn
-        }
-        ARCHIVE_FAILED => {
-            ArchiveError::Failed
-        }
-        ARCHIVE_RETRY => {
-            ArchiveError::Retry
-        }
-        ARCHIVE_EOF => {
-            ArchiveError::Eof
-        }
-        ARCHIVE_FATAL => {
-            ArchiveError::Fatal
-        }
+        ARCHIVE_OK => ArchiveError::Ok,
+        ARCHIVE_WARN => ArchiveError::Warn,
+        ARCHIVE_FAILED => ArchiveError::Failed,
+        ARCHIVE_RETRY => ArchiveError::Retry,
+        ARCHIVE_EOF => ArchiveError::Eof,
+        ARCHIVE_FATAL => ArchiveError::Fatal,
         _ => {
             panic!();
         }
@@ -191,10 +178,10 @@ extern "C" fn arch_read(
         let mut rc = Box::from_raw(_client_data as *mut ReadContainer);
         *_buffer = rc.buffer.as_mut_ptr() as *mut c_void;
         let size = rc.read_bytes();
-        Box::into_raw(rc);
+        let _ = Box::into_raw(rc);
 
         if let Err(err) = size {
-            let descr = CString::new(err.description()).unwrap();
+            let descr = CString::new(err.to_string()).unwrap();
             archive_set_error(arch, err.raw_os_error().unwrap_or(0), descr.as_ptr());
             -1
         } else {
@@ -211,17 +198,13 @@ extern "C" fn arch_close(arch: *mut Struct_archive, _client_data: *mut c_void) -
     }
 }
 
-extern "C" fn arch_skip(
-    _: *mut Struct_archive,
-    _client_data: *mut c_void,
-    request: i64,
-) -> i64 {
+extern "C" fn arch_skip(_: *mut Struct_archive, _client_data: *mut c_void, request: i64) -> i64 {
     unsafe {
         let mut rc = Box::from_raw(_client_data as *mut ReadContainer);
 
         // we can't return error code here, but if we return 0 normal read will be called, where error code will be set
         if rc.seeker.is_none() {
-            Box::into_raw(rc);
+            let _ = Box::into_raw(rc);
             return 0;
         }
         let size = rc
@@ -231,7 +214,7 @@ extern "C" fn arch_skip(
             .seek(std::io::SeekFrom::Current(request))
             .unwrap_or(0);
 
-        Box::into_raw(rc);
+        let _ = Box::into_raw(rc);
         size as i64
     }
 }
@@ -286,11 +269,7 @@ impl Reader {
     pub fn open_memory(self, memory: &mut [u8]) -> Result<Self, ArchiveError> {
         unsafe {
             let memptr: *mut u8 = &mut memory[0];
-            let res = archive_read_open_memory(
-                *self.handler,
-                memptr as *mut c_void,
-                memory.len() as usize,
-            );
+            let res = archive_read_open_memory(*self.handler, memptr as *mut c_void, memory.len());
             if res == ARCHIVE_OK {
                 Ok(self)
             } else {
@@ -345,7 +324,7 @@ impl Reader {
 
     pub fn read_data(&self, size: size_t) -> Result<Vec<u8>, ArchiveError> {
         unsafe {
-            let mut chunk_vec = Vec::with_capacity(size as usize);
+            let mut chunk_vec = Vec::with_capacity(size);
             let chunk_ptr = chunk_vec.as_mut_ptr();
             let res = archive_read_data(*self.handler, chunk_ptr as *mut c_void, size) as i32;
             if (res == ARCHIVE_FATAL) || (res == ARCHIVE_WARN) || (res == ARCHIVE_RETRY) {
@@ -498,7 +477,7 @@ impl Writer {
             let res = archive_write_open_memory(
                 *self.handler,
                 memptr as *mut c_void,
-                memory.len() as usize,
+                memory.len(),
                 *self.outUsed,
             );
             if res == ARCHIVE_OK {
@@ -547,11 +526,7 @@ impl Writer {
             let data_len = data.len();
             let data_bytes = CString::from_vec_unchecked(data);
             // TODO: How to handle errors here?
-            archive_write_data(
-                *self.handler,
-                data_bytes.as_ptr() as *mut c_void,
-                data_len as usize,
-            );
+            archive_write_data(*self.handler, data_bytes.as_ptr() as *mut c_void, data_len);
         }
         Ok(self)
     }
@@ -608,8 +583,8 @@ macro_rules! get_time {
     ( $fname:ident, $apiname:ident) => {
         pub fn $fname(&self) -> Duration {
             unsafe {
-                let sec = (concat_idents!(archive_entry_, $apiname))(self.entry);
-                let nsec = (concat_idents!(archive_entry_, $apiname, _nsec))(self.entry);
+                let sec = (${concat(archive_entry_, $apiname)})(self.entry);
+                let nsec = (${concat(archive_entry_, $apiname, _nsec)})(self.entry);
                 Duration::new(sec, nsec as i32)
             }
         }
